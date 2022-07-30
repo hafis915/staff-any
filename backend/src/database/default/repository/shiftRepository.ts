@@ -10,6 +10,7 @@ import Shift from "../entity/shift";
 import { QueryDeepPartialEntity } from "typeorm/query-builder/QueryPartialEntity";
 
 const logger = moduleLogger("shiftRepository");
+import {In} from "typeorm";
 
 export const find = async (opts?: FindManyOptions<Shift>): Promise<Shift[]> => {
   logger.info("Find");
@@ -55,6 +56,15 @@ export const updateById = async (
   return findById(id);
 };
 
+export const bulkPublished = async (
+  id : string[], isPublish:boolean
+): Promise<unknown> => {
+  logger.info("Bulk Published");
+  const repository = getRepository(Shift)
+  await repository.update({ id :In(id) }, {isPublish : isPublish})
+  return "Success"
+}
+
 export const deleteById = async (
   id: string | string[]
 ): Promise<DeleteResult> => {
@@ -64,19 +74,17 @@ export const deleteById = async (
 };
 
 export const checkExisting = async(date:string, startTime: string, endTime :string) : Promise<Shift[]> => {
+  logger.info("Check Clash Schedule");
   const repository = getRepository(Shift);
   let _date: string | Date = new Date(date)
   let _year = _date.getFullYear()
   let _month = _date.getMonth()+1 > 9 ? _date.getMonth()+1 : '0'+ (_date.getMonth()+1)
   let _dates = _date.getDate()
   _date = `${_year}-${_month}-${_dates}`
-  console.log(_date)
   const _query = `
   select * from "shift" s where s.date = '${_date}' and (s."startTime" >= '${startTime}' or  s."endTime" > '${startTime}' ) and 
   (s."startTime" < '${endTime}' or s."endTime" < '${endTime}');
   `
-  console.log(_query, "<<< QUERY")
   const data = await repository.query(_query)
-  console.log(data, "<< REPOSITORY ")
   return data
 }

@@ -5,10 +5,12 @@ import {
   ICreateShift,
   ISuccessResponse,
   IUpdateShift,
-  IErrorResponse
+  IErrorResponse,
+  IBulkPublish
 } from "../../../shared/interfaces";
 import moduleLogger from "../../../shared/functions/logger";
 import { Between } from "typeorm";
+import moment from "moment"
 
 const logger = moduleLogger("shiftController");
 
@@ -89,7 +91,15 @@ export const updateById = async (req: Request, h: ResponseToolkit) => {
     const id = req.params.id;
     const body = req.payload as IUpdateShift;
     // find  shift that overlap with the payload time
-    const existingShift = await shiftUsecase.checkExisting(body.date, body.startTime, body.endTime)
+    const _data = await shiftUsecase.findById(id) 
+    console.log(_data.startTime.slice(0,-3) != body.startTime )
+    console.log( _data.endTime.slice(0,-3) != body.endTime)
+
+
+    let existingShift = []
+    if((_data.startTime.slice(0,-3) != body.startTime || _data.endTime.slice(0,-3) != body.endTime)) {
+      existingShift = await shiftUsecase.checkExisting(body.date, body.startTime, body.endTime)
+    }
     let res :ISuccessResponse | IErrorResponse
     if(existingShift.length > 0 ) {
       throw {
@@ -98,7 +108,7 @@ export const updateById = async (req: Request, h: ResponseToolkit) => {
         name : "Shift Is OverLapping",
       }
     }else {
-      const _data = await shiftUsecase.findById(id) 
+      console.log(_data.isPublish, "<<<<<")
       if(!_data.isPublish ){
         const data = await shiftUsecase.updateById(id, body);
         res = {
@@ -106,11 +116,11 @@ export const updateById = async (req: Request, h: ResponseToolkit) => {
           message: "Update shift successful",
           results: data,
         };
-      }{
-        res = {
-          statusCode: 400,
+      }else {
+        throw {
+          stats: 400,
           message: "Shift has published",
-          error: "You Cant Edit Published shift"
+          name: "You Cant Edit Published shift"
         }
       }
     }
@@ -137,3 +147,20 @@ export const deleteById = async (req: Request, h: ResponseToolkit) => {
     return errorHandler(h, error);
   }
 };
+
+export const bulkPublished = async(req: Request, h: ResponseToolkit) => {
+  logger.info("Bulk Change isPublish");
+  try {
+    const body= req.payload as IBulkPublish
+    const data = await shiftUsecase.bulkPublished(body.id, body.status)
+    const res: ISuccessResponse = {
+      statusCode: 200, 
+      message : "Success Change IsPublished status",
+      results : data
+    }
+    return res
+  } catch (error) {
+    logger.error(error.message)
+    return errorHandler(h, error);
+  }
+}

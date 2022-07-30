@@ -15,7 +15,7 @@ module.exports = [
         ? ["dist/src/database/default/entity/*.js"]
         : ["src/database/default/entity/*.ts"],
     synchronize: true,
-    logging: true,
+    logging: false,
     migrations:
       process.env.NODE_ENV === "production"
         ? ["dist/src/database/default/migration/**/*.js"]

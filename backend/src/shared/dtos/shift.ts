@@ -9,6 +9,11 @@ export const createShiftDto = Joi.object({
   endTime:Joi.string().regex(timeRegex).required()
 });
 
+export const bulkPublishDto = Joi.object({
+  id: Joi.array().items(Joi.string()),
+  status: Joi.boolean()
+})
+
 export const updateShiftDto = Joi.object({
   name: Joi.string(),
   date: Joi.date(),

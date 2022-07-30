@@ -5,7 +5,7 @@ import Button from "@material-ui/core/Button";
 import CardContent from "@material-ui/core/CardContent";
 import { makeStyles } from "@material-ui/core/styles";
 import { getErrorMessage } from "../helper/error/index";
-import { deleteShiftById, getWeeklyShift } from "../helper/api/shift";
+import { deleteShiftById, getWeeklyShift, bulkPublish } from "../helper/api/shift";
 import DataTable from "react-data-table-component";
 import IconButton from "@material-ui/core/IconButton";
 import DeleteIcon from "@material-ui/icons/Delete";
@@ -73,6 +73,8 @@ const Shifts = () => {
   const [lastDate, setLastDate] = useState<string | Date>("")
   const [startDate, setStartDate] = useState<string>("")
   const [endDate, setEndDate] = useState<string>("")
+  const [arrayOfId, setArrayOfId] = useState<string[]>([])
+  const [isPublished, setIsPublished] = useState<boolean>(false)
   const onDeleteClick = (id: string) => {
     setSelectedId(id);
     setShowDeleteConfirm(true);
@@ -85,18 +87,18 @@ const Shifts = () => {
 
   const getFirstAndLastDate = async () => {
     var curr = new Date()
-    var first = curr.getDate() - curr.getDay();
-    var last = first + 6;
-    var firstday = new Date(curr.setDate(first)).toLocaleDateString("en-US", {
+    var first = moment(curr).day(0).format("YYYY-MM-DD")
+    var last = moment(curr).day(6).format("YYYY-MM-DD");
+    var firstday = new Date(first).toLocaleDateString("en-US", {
       day: "numeric",
       month: "long",
     });
-    var lastday = new Date(curr.setDate(last)).toLocaleDateString("en-US", {
+    var lastday = new Date(last).toLocaleDateString("en-US", {
       day: "numeric",
       month: "long",
     });
-    setStartDate(moment(new Date(curr.setDate(first))).format("YYYY-MM-DD"))
-    setEndDate(moment(new Date(curr.setDate(last))).format("YYYY-MM-DD"))
+    setStartDate(first)
+    setEndDate(last)
     setFirstDate(firstday)
     setLastDate(lastday)
   }
@@ -105,11 +107,27 @@ const Shifts = () => {
     const getData = async () => {
       try {
         setIsLoading(true);
-        await getFirstAndLastDate()
         setErrMsg("");
         if (startDate && endDate) {
+          console.log("get result")
           const { results } = await getWeeklyShift(startDate, endDate);
+          results.forEach((el: any) => {
+            let isIncludeinArray: boolean = arrayOfId.includes(el.id)
+            if (!isIncludeinArray) {
+              setArrayOfId([...arrayOfId, el.id])
+            }
+          })
+          let checkIsPublish = results.find((el: any) => el.isPublish === true)
+
+          if (checkIsPublish) {
+            setIsPublished(true)
+          } else {
+            setIsPublished(false)
+          }
           setRows(results);
+        } else {
+          await getFirstAndLastDate()
+
         }
       } catch (error) {
         const message = getErrorMessage(error);
@@ -121,25 +139,35 @@ const Shifts = () => {
     };
 
     getData();
-  }, [startDate, endDate]);
+  }, [startDate, endDate, arrayOfId, isPublished]);
 
   function nextWeekHandler(event: string) {
-    let _currentDate = new Date(startDate)
-    let first = event === "next" ? (_currentDate.getDate() - _currentDate.getDay()) + 7 : (_currentDate.getDate() - _currentDate.getDay()) - 7
-    let last = first + 6
-    var firstday = new Date(_currentDate.setDate(first)).toLocaleDateString("en-US", {
+    // var first = curr.getDate() - curr.getDay();
+    // var last = first + 6;
+    // var first = curr.getDate() - curr.getDay();
+    let curr: string | Date
+    curr = new Date(startDate)
+    // let first: string
+    // let last: string
+    if (event === 'next') {
+      curr = moment(curr).day(+7).format("YYYY-MM-DD")
+    } else {
+      curr = moment(curr).day(-7).format("YYYY-MM-DD")
+    }
+    var first = moment(curr).day(0).format("YYYY-MM-DD")
+    var last = moment(curr).day(6).format("YYYY-MM-DD");
+    var firstday = new Date(first).toLocaleDateString("en-US", {
       day: "numeric",
       month: "long",
     });
-    var lastday = new Date(_currentDate.setDate(last)).toLocaleDateString("en-US", {
+    var lastday = new Date(last).toLocaleDateString("en-US", {
       day: "numeric",
       month: "long",
     });
+    setStartDate(first)
+    setEndDate(last)
     setFirstDate(firstday)
     setLastDate(lastday)
-    setStartDate(moment(new Date(_currentDate.setDate(first))).format("YYYY-MM-DD"))
-    setEndDate(moment(new Date(_currentDate.setDate(last))).format("YYYY-MM-DD"))
-
   }
   const columns = [
     {
@@ -195,6 +223,13 @@ const Shifts = () => {
       onCloseDeleteDialog();
     }
   };
+  const publishHandle = async () => {
+    setIsLoading(true)
+    await bulkPublish(arrayOfId, true)
+    setIsLoading(false)
+    setIsPublished(true)
+
+  }
 
   return (
     <Grid container spacing={3}>
@@ -216,7 +251,7 @@ const Shifts = () => {
 
               <div style={{ width: "50%", display: "flex", justifyContent: "flex-end", gap: "5px" }}>
                 <Button variant="outlined" color="primary" onClick={() => history.push("/shift/add")}>Add Shift</Button>
-                <Button variant="contained" color="primary">Publish</Button>
+                <Button variant="contained" color="primary" disabled={isPublished} onClick={publishHandle}>Publish</Button>
               </div>
             </div>
             <DataTable

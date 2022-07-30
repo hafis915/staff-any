@@ -1,6 +1,6 @@
 import { Server } from '@hapi/hapi';
 import * as shiftController from './shiftController';
-import { createShiftDto, filterSchema, idDto, updateShiftDto } from '../../../shared/dtos';
+import { createShiftDto, filterSchema, idDto, updateShiftDto , bulkPublishDto} from '../../../shared/dtos';
 
 export default function (server: Server, basePath: string) {
   server.route({
@@ -70,4 +70,19 @@ export default function (server: Server, basePath: string) {
       },
     }
   });
+
+  server.route({
+    method: "POST",
+    path:basePath + "/publish",
+    handler: shiftController.bulkPublished,
+    options: {
+      description: "Bulk Change isPublished Status",
+      notes: "Bulk Change",
+      tags: ['api', 'shift'],    
+      validate: {
+        payload: bulkPublishDto
+      }
+    },
+
+  })
 }

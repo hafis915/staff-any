@@ -44,3 +44,8 @@ export const checkExisting = async (
 export const deleteById = async (id: string | string[]) => {
   return shiftRepository.deleteById(id);
 };
+
+
+export const bulkPublished = async(id: string[], isPublished: boolean) => {
+  return shiftRepository.bulkPublished(id, isPublished)
+}

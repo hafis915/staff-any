@@ -35,3 +35,13 @@ export const deleteShiftById = async (id: string) => {
   const { data } = await api.delete(`/shifts/${id}`);
   return data;
 };
+
+export const bulkPublish = async(id : string[], status:boolean) => {
+  const api = getAxiosInstance()
+  const payload = {
+    id,
+    status
+  }
+  const {data} = await api.post('/shifts/publish', payload)
+  return data
+}
